@@ -1,4 +1,6 @@
-from binaryninja import *
+#from binaryninja import *
+from binaryninja import BinaryView
+from binaryninja import (PluginCommand, show_message_box, MessageBoxButtonSet, MessageBoxIcon)
 
 import binaryninjaui
 from binaryninjaui import (getMonospaceFont, UIAction, UIActionHandler, Menu, UIContext)
@@ -6,25 +8,25 @@ if "qt_major_version" in binaryninjaui.__dict__ and binaryninjaui.qt_major_versi
     from PySide6.QtWidgets import (QLineEdit, QPushButton, QApplication, QWidget,
          QVBoxLayout, QHBoxLayout, QDialog, QFileSystemModel, QTreeView, QLabel, QSplitter,
          QInputDialog, QMessageBox, QHeaderView, QKeySequenceEdit, QCheckBox, QGroupBox, QSizePolicy, QScrollArea,
-         QSpacerItem)
+         QSpacerItem, QListView)
     from PySide6.QtCore import (QDir, Qt, QFileInfo, QItemSelectionModel, QSettings, QUrl, QRect)
     from PySide6.QtGui import (QFontMetrics, QDesktopServices, QKeySequence, QIcon)
 else:
     from PySide2.QtWidgets import (QLineEdit, QPushButton, QApplication, QWidget,
          QVBoxLayout, QHBoxLayout, QDialog, QFileSystemModel, QTreeView, QLabel, QSplitter,
          QInputDialog, QMessageBox, QHeaderView, QKeySequenceEdit, QCheckBox, QGroupBox, QSizePolicy, QScrollArea,
-         QSpacerItem)
+         QSpacerItem, QListView)
     from PySide2.QtCore import (QDir, Qt, QFileInfo, QItemSelectionModel, QSettings, QUrl, QRect)
     from PySide2.QtGui import (QFontMetrics, QDesktopServices, QKeySequence, QIcon)
 
-class Binpatch(QDialog):
+class Ninpatch(QDialog):
 
     def __init__(self, context, parent=None):
-        super(Binpatch, self).__init__(parent)
+        super(Ninpatch, self).__init__(parent)
 
         # Create widgets
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-        self.title = QLabel(self.tr("Binpatch"))
+        self.title = QLabel(self.tr("Ninpatch"))
         self.setWindowTitle(self.title.text())
         self.resize(419, 530)
 
@@ -37,11 +39,13 @@ class Binpatch(QDialog):
         self.groupBox.setSizePolicy(sizePolicy)
 
         # ---- 
-        self.scrollArea = QScrollArea(self.groupBox)
-        self.scrollArea.setWidgetResizable(True)
-        self.scrollAreaWidgetContents = QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 373, 332))
-        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+        self.listOfPatches = QListView(self.groupBox)
+        self.bv = context.binaryView
+        #self.test = bv.query_metadata("binpatch-patches")
+        print("Here")
+        print(context.binaryView.get_disassembly(0x13e7))
+        print( self.bv.get_disassembly(0x13e7))
+        print("------")
 
         # ----
         self.buttonSelect = QPushButton(self.groupBox.tr("&Select All"))
@@ -52,7 +56,7 @@ class Binpatch(QDialog):
 
         # ----
         self.verticalLayout = QVBoxLayout(self.groupBox)
-        self.verticalLayout.addWidget(self.scrollArea)
+        self.verticalLayout.addWidget(self.listOfPatches)
         self.verticalLayout.addLayout(self.hLayoutSeclection)
 
         # ----
@@ -128,12 +132,12 @@ binpatch = None
 def launchPlugin(context):
     global binpatch
     if not binpatch:
-        binpatch = Binpatch(context, parent=context.widget)
+        binpatch = Ninpatch(context, parent=context.widget)
     binpatch.show()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    binpatch = Binpatch(None)
+    binpatch = Ninpatch(None)
     binpatch.show()
     sys.exit(app.exec_())
 else:
