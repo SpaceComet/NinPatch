@@ -5,54 +5,93 @@ from binaryninjaui import (getMonospaceFont, UIAction, UIActionHandler, Menu, UI
 if "qt_major_version" in binaryninjaui.__dict__ and binaryninjaui.qt_major_version == 6:
     from PySide6.QtWidgets import (QLineEdit, QPushButton, QApplication, QWidget,
          QVBoxLayout, QHBoxLayout, QDialog, QFileSystemModel, QTreeView, QLabel, QSplitter,
-         QInputDialog, QMessageBox, QHeaderView, QKeySequenceEdit, QCheckBox)
-    from PySide6.QtCore import (QDir, Qt, QFileInfo, QItemSelectionModel, QSettings, QUrl)
+         QInputDialog, QMessageBox, QHeaderView, QKeySequenceEdit, QCheckBox, QGroupBox, QSizePolicy, QScrollArea,
+         QSpacerItem)
+    from PySide6.QtCore import (QDir, Qt, QFileInfo, QItemSelectionModel, QSettings, QUrl, QRect)
     from PySide6.QtGui import (QFontMetrics, QDesktopServices, QKeySequence, QIcon)
 else:
     from PySide2.QtWidgets import (QLineEdit, QPushButton, QApplication, QWidget,
          QVBoxLayout, QHBoxLayout, QDialog, QFileSystemModel, QTreeView, QLabel, QSplitter,
-         QInputDialog, QMessageBox, QHeaderView, QKeySequenceEdit, QCheckBox)
-    from PySide2.QtCore import (QDir, Qt, QFileInfo, QItemSelectionModel, QSettings, QUrl)
+         QInputDialog, QMessageBox, QHeaderView, QKeySequenceEdit, QCheckBox, QGroupBox, QSizePolicy, QScrollArea,
+         QSpacerItem)
+    from PySide2.QtCore import (QDir, Qt, QFileInfo, QItemSelectionModel, QSettings, QUrl, QRect)
     from PySide2.QtGui import (QFontMetrics, QDesktopServices, QKeySequence, QIcon)
 
 class Binpatch(QDialog):
 
     def __init__(self, context, parent=None):
         super(Binpatch, self).__init__(parent)
+
         # Create widgets
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.title = QLabel(self.tr("Binpatch"))
-        self.saveButton = QPushButton(self.tr("&Save"))
-        self.saveButton.setShortcut(QKeySequence(self.tr("Ctrl+S")))
-        self.closeButton = QPushButton(self.tr("Close"))
         self.setWindowTitle(self.title.text())
+        self.resize(419, 530)
+
+        # ----
+        self.groupBox = QGroupBox(self.tr("&Patches"))
+        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.groupBox.sizePolicy().hasHeightForWidth())
+        self.groupBox.setSizePolicy(sizePolicy)
+
+        # ---- 
+        self.scrollArea = QScrollArea(self.groupBox)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollAreaWidgetContents = QWidget()
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 373, 332))
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+
+        # ----
+        self.buttonSelect = QPushButton(self.groupBox.tr("&Select All"))
+        self.buttonDeselect = QPushButton(self.groupBox.tr("&Deselect All"))
+        self.hLayoutSeclection = QHBoxLayout()
+        self.hLayoutSeclection.addWidget(self.buttonSelect)
+        self.hLayoutSeclection.addWidget(self.buttonDeselect)
+
+        # ----
+        self.verticalLayout = QVBoxLayout(self.groupBox)
+        self.verticalLayout.addWidget(self.scrollArea)
+        self.verticalLayout.addLayout(self.hLayoutSeclection)
+
+        # ----
+        self.buttonPatch = QPushButton(self.tr("&Patch File"))
+        self.hLayoutIO = QHBoxLayout()
+        self.buttonImportPacthes = QPushButton(self.tr("&Import Patches"))
+        self.buttonExportPatches = QPushButton(self.tr("&Export Patches"))
+        self.hLayoutIO.addWidget(self.buttonImportPacthes)
+        self.hLayoutIO.addWidget(self.buttonExportPatches)
+
+        # ----
+        self.hLayoutClose = QHBoxLayout()
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.buttonClose = QPushButton(self.tr("&Close"))
+        self.hLayoutClose.addItem(self.horizontalSpacer)
+        self.hLayoutClose.addWidget(self.buttonClose)
+
+        # ----
+        self.vLayoutButtons = QVBoxLayout()
+        self.vLayoutButtons.addWidget(self.buttonPatch)
+        self.vLayoutButtons.addLayout(self.hLayoutIO)
+        self.vLayoutButtons.addLayout(self.hLayoutClose)
+
+        self.vLayoutPatches = QVBoxLayout()
+        self.vLayoutPatches.addWidget(self.groupBox)
+        self.vLayoutPatches.addLayout(self.vLayoutButtons)
+
+        self.verticalLayout_3 = QVBoxLayout()
+        self.verticalLayout_3.addLayout(self.vLayoutPatches)
+
+        #self.saveButton = QPushButton(self.tr("&Save"))
+        #self.saveButton.setShortcut(QKeySequence(self.tr("Ctrl+S")))
 
         # Add signals
-        self.saveButton.clicked.connect(self.saveClicked)
-        self.closeButton.clicked.connect(self.close)
-
-        # Create layout and add widgets
-        optionsAndButtons = QVBoxLayout()
-
-        buttons = QHBoxLayout()
-        buttons.addWidget(self.closeButton)
-        buttons.addWidget(self.saveButton)
-
-        optionsAndButtons.addLayout(buttons)
-
-        vlayoutWidget = QWidget()
-        vlayout = QVBoxLayout()
-        vlayout.addLayout(optionsAndButtons)
-        vlayoutWidget.setLayout(vlayout)
-
-        hsplitter = QSplitter()
-        hsplitter.addWidget(vlayoutWidget)
-
-        hlayout = QHBoxLayout()
-        hlayout.addWidget(hsplitter)
+        self.buttonPatch.clicked.connect(self.saveClicked)
+        self.buttonClose.clicked.connect(self.close)
 
         # Set dialog layout
-        self.setLayout(hlayout)
+        self.setLayout(self.verticalLayout_3)
 
     def saveClicked(self):
         print("Click!")
