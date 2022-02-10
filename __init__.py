@@ -10,14 +10,14 @@ if "qt_major_version" in binaryninjaui.__dict__ and binaryninjaui.qt_major_versi
          QInputDialog, QMessageBox, QHeaderView, QKeySequenceEdit, QCheckBox, QGroupBox, QSizePolicy, QScrollArea,
          QSpacerItem, QListView)
     from PySide6.QtCore import (QDir, Qt, QFileInfo, QItemSelectionModel, QSettings, QUrl, QRect)
-    from PySide6.QtGui import (QFontMetrics, QDesktopServices, QKeySequence, QIcon)
+    from PySide6.QtGui import (QFontMetrics, QDesktopServices, QKeySequence, QIcon, QStandardItemModel, QStandardItem)
 else:
     from PySide2.QtWidgets import (QLineEdit, QPushButton, QApplication, QWidget,
          QVBoxLayout, QHBoxLayout, QDialog, QFileSystemModel, QTreeView, QLabel, QSplitter,
          QInputDialog, QMessageBox, QHeaderView, QKeySequenceEdit, QCheckBox, QGroupBox, QSizePolicy, QScrollArea,
          QSpacerItem, QListView)
     from PySide2.QtCore import (QDir, Qt, QFileInfo, QItemSelectionModel, QSettings, QUrl, QRect)
-    from PySide2.QtGui import (QFontMetrics, QDesktopServices, QKeySequence, QIcon)
+    from PySide2.QtGui import (QFontMetrics, QDesktopServices, QKeySequence, QIcon, QStandardItemModel, QStandardItem)
 
 class Ninpatch(QDialog):
 
@@ -39,13 +39,30 @@ class Ninpatch(QDialog):
         self.groupBox.setSizePolicy(sizePolicy)
 
         # ---- 
-        self.listOfPatches = QListView(self.groupBox)
         self.bv = context.binaryView
-        #self.test = bv.query_metadata("binpatch-patches")
-        print("Here")
-        print(context.binaryView.get_disassembly(0x13e7))
-        print( self.bv.get_disassembly(0x13e7))
-        print("------")
+        self.patches = []
+        self.listOfPatches = QListView(self.groupBox)
+        self.listOfPatchesModel = QStandardItemModel()
+        
+        # Get the patches list
+        try:
+            tmpPatches = self.bv.query_metadata("binpatch-patches")
+            if (type(tmpPatches) is list):
+                if (len(tmpPatches) > 0):
+                    self.patches = self.bv.query_metadata("binpatch-patches")
+        except:
+            print("There are not Pacthes")
+
+        # Build list of patches
+        if (len(self.patches) > 0):
+            for nPatch in self.patches:
+                item = QStandardItem(nPatch)
+                item.setCheckable(True)
+                check = Qt.Checked #if checked else QtCore.Qt.Unchecked
+                item.setCheckState(check)
+                self.listOfPatchesModel.appendRow(item)
+        
+        self.listOfPatches.setModel(self.listOfPatchesModel)
 
         # ----
         self.buttonSelect = QPushButton(self.groupBox.tr("&Select All"))
