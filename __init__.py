@@ -1,5 +1,4 @@
 #from binaryninja import *
-from binaryninja import BinaryView
 from binaryninja import (PluginCommand, show_message_box, MessageBoxButtonSet, MessageBoxIcon)
 
 import binaryninjaui
@@ -46,10 +45,10 @@ class Ninpatch(QDialog):
         
         # Get the patches list
         try:
-            tmpPatches = self.bv.query_metadata("binpatch-patches")
+            tmpPatches = self.bv.query_metadata("ninpatch-patches")
             if (type(tmpPatches) is list):
                 if (len(tmpPatches) > 0):
-                    self.patches = self.bv.query_metadata("binpatch-patches")
+                    self.patches = self.bv.query_metadata("ninpatch-patches")
         except:
             print("There are not Pacthes")
 
@@ -117,45 +116,47 @@ class Ninpatch(QDialog):
     def saveClicked(self):
         print("Click!")
 
+ninpatch = None
 
-def bp_patch(bv,function):
+def np_patch(bv, cuAddr):
 	patchesList = []
-	tmpValues = bv.read(function, bv.get_instruction_length(function)).hex()
+	tmpValues = bv.read(cuAddr, bv.get_instruction_length(cuAddr)).hex()
 
 	try:
-		patchesList = bv.query_metadata("binpatch-patches")
+		patchesList = bv.query_metadata("ninpatch-patches")
 		patchesList.append(tmpValues)
-		bv.store_metadata("binpatch-patches", patchesList)
+		bv.store_metadata("ninpatch-patches", patchesList)
 	except:
-		bv.store_metadata("binpatch-patches", [tmpValues])
+		bv.store_metadata("ninpatch-patches", [tmpValues])
 
-	show_message_box("Do Nothing", str(hex(function)), MessageBoxButtonSet.OKButtonSet, MessageBoxIcon.ErrorIcon)
+	show_message_box("Do Nothing", str(hex(cuAddr)), MessageBoxButtonSet.OKButtonSet, MessageBoxIcon.ErrorIcon)
 
 
-def bp_view(bv,function):
-	tmpVal = bv.query_metadata("binpatch-patches")
+def np_view(bv, cuAddr):
+	tmpVal = bv.query_metadata("ninpatch-patches")
 	show_message_box("View Patches", ', '.join(tmpVal)+"\n\n", MessageBoxButtonSet.OKButtonSet, MessageBoxIcon.ErrorIcon)
 
 PluginCommand.register_for_address(
-	"NinPatch\\Patch\\Patch01", "Patch this", bp_patch
+	"NinPatch\\Patch\\Patch01", "Patch this", np_patch
 )
 
 PluginCommand.register_for_address(
-	"NinPatch\\View\\View Patches", "View all Patches", bp_view
+	"NinPatch\\View\\View Patches", "View all Patches", np_view
 )
 
-binpatch = None
-
 def launchPlugin(context):
-    global binpatch
-    if not binpatch:
-        binpatch = Ninpatch(context, parent=context.widget)
-    binpatch.show()
+    global ninpatch
+    #if not ninpatch:
+    #    ninpatch = Ninpatch(context, parent=context.widget)
+
+    # Rebuild the window every time because I don't know how to update it... yet.
+    ninpatch = Ninpatch(context, parent=context.widget)
+    ninpatch.show()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    binpatch = Ninpatch(None)
-    binpatch.show()
+    ninpatch = Ninpatch(None)
+    ninpatch.show()
     sys.exit(app.exec_())
 else:
     UIAction.registerAction("NinPatch\\View Patches")
