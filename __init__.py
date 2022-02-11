@@ -18,6 +18,20 @@ else:
     from PySide2.QtCore import (QDir, Qt, QFileInfo, QItemSelectionModel, QSettings, QUrl, QRect)
     from PySide2.QtGui import (QFontMetrics, QDesktopServices, QKeySequence, QIcon, QStandardItemModel, QStandardItem)
 
+
+def getPatchesInMetadata(bv):
+    rVal = None
+
+    try:
+        tmpPatches = bv.query_metadata("ninpatch-patches")
+        if (type(tmpPatches) is list):
+            if (len(tmpPatches) > 0):
+                rVal = tmpPatches
+    except:
+        rVal = False
+
+    return(rVal)
+
 class Ninpatch(QDialog):
 
     def __init__(self, context, parent=None):
@@ -44,22 +58,25 @@ class Ninpatch(QDialog):
         self.listOfPatchesModel = QStandardItemModel()
         
         # Get the patches list
-        try:
-            tmpPatches = self.bv.query_metadata("ninpatch-patches")
-            if (type(tmpPatches) is list):
-                if (len(tmpPatches) > 0):
-                    self.patches = self.bv.query_metadata("ninpatch-patches")
-        except:
-            print("There are not Pacthes")
+        self.patches = getPatchesInMetadata(self.bv)
 
         # Build list of patches
-        if (len(self.patches) > 0):
+        if (self.patches):
             for nPatch in self.patches:
-                item = QStandardItem(nPatch)
-                item.setCheckable(True)
-                check = Qt.Checked #if checked else QtCore.Qt.Unchecked
-                item.setCheckState(check)
-                self.listOfPatchesModel.appendRow(item)
+                if (len(nPatch) >= 4):
+                    item = QStandardItem("@{0}: {1} -> {2}".format(hex(nPatch[1]), nPatch[2], nPatch[3]))
+                    item.setCheckable(True)
+                    check = Qt.Checked if nPatch[0] else Qt.Unchecked
+                    item.setCheckState(check)
+                    self.listOfPatchesModel.appendRow(item)
+                else:
+                    # the metadata is corrupted
+                    # TODO: Show Error Msg
+                    break
+        else:
+            item = QStandardItem("There are not patches")
+            self.listOfPatchesModel.appendRow(item)
+
         
         self.listOfPatches.setModel(self.listOfPatchesModel)
 
@@ -119,22 +136,30 @@ class Ninpatch(QDialog):
 ninpatch = None
 
 def np_patch(bv, cuAddr):
-	patchesList = []
-	tmpValues = bv.read(cuAddr, bv.get_instruction_length(cuAddr)).hex()
+    patchesList = []
+    cpCuOpcode = bv.arch.assemble((bv.get_disassembly( cuAddr ))).hex()
+    cpPaOpcode = bv.arch.convert_to_nop(bytes.fromhex(cpCuOpcode)).hex()
 
-	try:
-		patchesList = bv.query_metadata("ninpatch-patches")
-		patchesList.append(tmpValues)
-		bv.store_metadata("ninpatch-patches", patchesList)
-	except:
-		bv.store_metadata("ninpatch-patches", [tmpValues])
+    # Patch's format
+    # [Check, address, current opcode, patched opcode]
+    currentPatch = [True, cuAddr, cpCuOpcode, cpPaOpcode]
 
-	show_message_box("Do Nothing", str(hex(cuAddr)), MessageBoxButtonSet.OKButtonSet, MessageBoxIcon.ErrorIcon)
+    patchesList = getPatchesInMetadata(bv)
+    if (patchesList):
+        # If there are patches in the metadata already then add the new patch
+        patchesList.append(currentPatch)
+        bv.store_metadata("ninpatch-patches", patchesList)
+    else:
+        # If not then make the metadata and add the first patch
+        bv.store_metadata("ninpatch-patches", [currentPatch])
+
+    #show_message_box("Do Nothing", str(hex(cuAddr)), MessageBoxButtonSet.OKButtonSet, MessageBoxIcon.ErrorIcon)
 
 
 def np_view(bv, cuAddr):
-	tmpVal = bv.query_metadata("ninpatch-patches")
-	show_message_box("View Patches", ', '.join(tmpVal)+"\n\n", MessageBoxButtonSet.OKButtonSet, MessageBoxIcon.ErrorIcon)
+    tmpVal = bv.query_metadata("ninpatch-patches")
+    print(tmpVal)
+    show_message_box("View Patches", str(tmpVal)+"\n\n", MessageBoxButtonSet.OKButtonSet, MessageBoxIcon.ErrorIcon)
 
 PluginCommand.register_for_address(
 	"NinPatch\\Patch\\Patch01", "Patch this", np_patch
